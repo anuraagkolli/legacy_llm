@@ -25,5 +25,8 @@ rich>=13.7.0
 # Hugging Face Hub (for model downloads)
 huggingface-hub>=0.20.0
 
+# Evaluation metrics
+nltk>=3.8.0
+
 # Memory optimization (optional but recommended)
 bitsandbytes>=0.41.0

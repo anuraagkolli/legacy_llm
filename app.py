@@ -1,28 +1,167 @@
 #!/usr/bin/env python3
 """
-Streamlit app for COBOL to Python translation using fine-tuned model.
+LegacyAI - Streamlit app for COBOL to Python translation using fine-tuned model.
 """
 
+import os
+import re
+from pathlib import Path
+
+import torch
 import streamlit as st
-from test import load_model, translate_cobol
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+
+# Model path: use environment variable or default to local checkpoint
+MODEL_PATH = os.environ.get("MODEL_PATH", "checkpoints/final")
+
+# Base model name
+BASE_MODEL_NAME = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+
+# System prompt for translation
+SYSTEM_PROMPT = (
+    "You are an expert COBOL to Python translator. Your task is to convert "
+    "COBOL programs into clean, idiomatic Python code that preserves the original "
+    "program's functionality and logic. Use appropriate Python patterns like classes, "
+    "dataclasses, context managers, and standard library modules."
+)
 
 # Page config
 st.set_page_config(
-    page_title="COBOL to Python Translator",
+    page_title="LegacyAI",
     page_icon="🔄",
     layout="wide"
 )
+
+
+def load_model(model_path: str, device: str = "auto"):
+    """Load the fine-tuned model (base + LoRA adapters)."""
+    # Determine device
+    if device == "auto":
+        if torch.cuda.is_available():
+            device_map = "auto"
+            torch_dtype = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+        elif torch.backends.mps.is_available():
+            device_map = {"": "mps"}
+            torch_dtype = torch.float32
+        else:
+            device_map = {"": "cpu"}
+            torch_dtype = torch.float32
+    else:
+        device_map = {"": device}
+        torch_dtype = torch.float16 if device == "cuda" else torch.float32
+
+    # Load tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_path,
+        trust_remote_code=True,
+    )
+
+    # Check if this is a LoRA model (has adapter_config.json)
+    adapter_config_path = Path(model_path) / "adapter_config.json"
+
+    if adapter_config_path.exists():
+        # Load base model
+        base_model = AutoModelForCausalLM.from_pretrained(
+            BASE_MODEL_NAME,
+            torch_dtype=torch_dtype,
+            device_map=device_map,
+            trust_remote_code=True,
+        )
+
+        # Load LoRA adapters
+        model = PeftModel.from_pretrained(base_model, model_path)
+    else:
+        # Load as regular model (merged or full fine-tune)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            torch_dtype=torch_dtype,
+            device_map=device_map,
+            trust_remote_code=True,
+        )
+
+    model.eval()
+    return model, tokenizer
+
+
+def extract_python_code(response: str) -> str:
+    """Extract Python code from the model's response."""
+    # Try to extract code between ```python and ```
+    pattern = r"```python\n?(.*?)```"
+    match = re.search(pattern, response, re.DOTALL)
+
+    if match:
+        return match.group(1).strip()
+
+    # Try without language specifier
+    pattern = r"```\n?(.*?)```"
+    match = re.search(pattern, response, re.DOTALL)
+
+    if match:
+        return match.group(1).strip()
+
+    # Return as-is if no code blocks found
+    return response.strip()
+
+
+def translate_cobol(
+    model,
+    tokenizer,
+    cobol_code: str,
+    max_new_tokens: int = 1024,
+    temperature: float = 0.1,
+    top_p: float = 0.95,
+) -> str:
+    """Translate COBOL code to Python using the fine-tuned model."""
+
+    # Format as chat messages
+    messages = [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"Translate the following COBOL code to Python:\n\n```cobol\n{cobol_code}\n```"}
+    ]
+
+    # Apply chat template
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+
+    # Tokenize
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+    # Generate
+    with torch.no_grad():
+        outputs = model.generate(
+            **inputs,
+            max_new_tokens=max_new_tokens,
+            temperature=temperature,
+            top_p=top_p,
+            do_sample=temperature > 0,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=tokenizer.eos_token_id,
+        )
+
+    # Decode only the new tokens
+    generated = outputs[0][inputs["input_ids"].shape[1]:]
+    response = tokenizer.decode(generated, skip_special_tokens=True)
+
+    # Extract Python code from response
+    python_code = extract_python_code(response)
+
+    return python_code
+
 
 # Cache the model loading
 @st.cache_resource
 def get_model():
     """Load and cache the model and tokenizer."""
-    model, tokenizer = load_model("checkpoints/final", device="auto")
+    model, tokenizer = load_model(MODEL_PATH, device="auto")
     return model, tokenizer
 
 
 def main():
-    st.title("COBOL to Python Translator")
+    st.title("LegacyAI")
     st.markdown("Translate COBOL code to Python using a fine-tuned LLM")
 
     # Load model

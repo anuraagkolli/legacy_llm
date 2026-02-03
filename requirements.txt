@@ -1,4 +1,4 @@
-# COBOL to Python Fine-tuning Pipeline
+# LegacyAI - COBOL to Python Fine-tuning Pipeline
 # Tested with Python 3.10+
 
 # Core ML/Deep Learning

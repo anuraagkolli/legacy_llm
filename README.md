@@ -1,6 +1,19 @@
-# COBOL to Python Fine-tuning Pipeline
+---
+title: LegacyAI
+emoji: 🔄
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: 1.29.0
+app_file: app.py
+pinned: false
+---
 
-A complete pipeline for fine-tuning a small LLM (Qwen2.5-Coder-1.5B-Instruct) to translate COBOL code to Python.
+# LegacyAI
+
+A complete pipeline for fine-tuning a small LLM to translate COBOL code to Python.
+
+Uses Qwen2.5-Coder-1.5B-Instruct as the base model.
 
 ## Features
 
@@ -97,8 +110,8 @@ The web app provides:
 
 2. **SSH into the pod** and clone the repo:
 ```bash
-git clone https://github.com/YOUR_USERNAME/legacy_llm.git
-cd legacy_llm
+git clone https://github.com/YOUR_USERNAME/legacyAI.git
+cd legacyAI
 ```
 
 3. **Install dependencies**:
@@ -125,6 +138,35 @@ python test.py --model checkpoints/final --example
 ```
 
 6. **Download results** - copy `checkpoints/final/` back to your local machine
+
+## Hugging Face Spaces Deployment
+
+Deploy the web app to Hugging Face Spaces:
+
+1. **Upload your trained model to Hugging Face Hub**:
+```bash
+pip install huggingface_hub
+huggingface-cli login
+huggingface-cli upload YOUR_USERNAME/legacyAI checkpoints/final .
+```
+
+2. **Create a new Space** at [huggingface.co/spaces](https://huggingface.co/spaces):
+   - Choose **Streamlit** as the SDK
+   - Select appropriate hardware (CPU or GPU)
+
+3. **Clone and push files to your Space**:
+```bash
+git clone https://huggingface.co/spaces/YOUR_USERNAME/legacyAI
+cp app.py test.py requirements.txt README.md YOUR_SPACE_DIR/
+cd YOUR_SPACE_DIR
+git add . && git commit -m "Initial commit" && git push
+```
+
+4. **Set the MODEL_PATH environment variable** in Space settings:
+   - Go to Settings → Variables and secrets
+   - Add: `MODEL_PATH` = `YOUR_USERNAME/legacyAI`
+
+The app will automatically load the model from Hugging Face Hub.
 
 ## Configuration Options
 

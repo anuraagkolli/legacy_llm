@@ -22,6 +22,9 @@ pandas>=2.0.0
 tqdm>=4.66.0
 rich>=13.7.0
 
+# Web interface
+streamlit>=1.29.0
+
 # Hugging Face Hub (for model downloads)
 huggingface-hub>=0.20.0
 

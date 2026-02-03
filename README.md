@@ -13,8 +13,9 @@ A complete pipeline for fine-tuning a small LLM (Qwen2.5-Coder-1.5B-Instruct) to
 ## Requirements
 
 - Python 3.10+
-- NVIDIA GPU with 16GB+ VRAM
+- NVIDIA GPU with 16GB+ VRAM (or CPU for inference only)
 - ~10GB disk space for model and checkpoints
+- Streamlit (for web app)
 
 ## Quick Start
 
@@ -77,6 +78,18 @@ Interactive mode:
 ```bash
 python test.py --model checkpoints/final --interactive
 ```
+
+### 5. Run the Web App
+
+Launch the Streamlit web interface:
+```bash
+streamlit run app.py
+```
+
+The web app provides:
+- Side-by-side COBOL input and Python output
+- Syntax highlighting and copy functionality
+- Cached model loading for fast subsequent translations
 
 ## RunPod Setup
 
